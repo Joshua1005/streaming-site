@@ -8,6 +8,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
 } from "react";
 import { PlayPauseButton } from "./play-pause-button";
 import { formatTime } from "@/lib/format-time";
@@ -26,6 +27,7 @@ type Props = {
 };
 
 const VideoPlayer = ({ src, enableKeyEvent }: Props) => {
+  const [videoReady, setVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const {
     state,
@@ -43,22 +45,23 @@ const VideoPlayer = ({ src, enableKeyEvent }: Props) => {
   } = useVideo(videoRef);
 
   useEffect(() => {
-    let mounted = true;
+    const videoElement = videoRef.current;
 
-    if (!mounted || !videoRef.current) return;
+    if (!videoElement) return;
 
-    handleSettingDuration();
-    initialize();
+    const handleLoadedData = () => {
+      handleSettingDuration();
+      initialize();
+    };
+
+    handleLoadedData();
+    videoElement.addEventListener("loadeddata", handleLoadedData);
 
     if (!enableKeyEvent) return;
     document.addEventListener("keydown", handleKeyEvent);
 
     return () => {
-      mounted = false;
-
-      if (!videoRef.current) return;
-      deinitialize();
-
+      videoElement.removeEventListener("loadeddata", handleLoadedData);
       if (!enableKeyEvent) return;
       document.removeEventListener("keydown", handleKeyEvent);
     };
