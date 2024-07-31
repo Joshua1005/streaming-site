@@ -1,17 +1,13 @@
-import { auth } from "@/auth";
-import { UploadVideoForm } from "@/components/video/upload-video-form";
-import { VideoPlayer } from "@/components/video/video-player";
-import { redirect } from "next/navigation";
+import { VideoCard } from "@/components/wrapper/video-card";
 
-async function HomePage() {
-  const session = await auth();
-  if (!session) return redirect("/signin");
-
+function Homepage() {
   return (
-    <main className={"grid place-items-center m-20"}>
-      <VideoPlayer enableKeyEvent={true} src={"videoplayback.mp4"} />
+    <main className={"mt-20 grid grid-cols-6 gap-2"}>
+      {Array.from({ length: 8 }, (_, index) => {
+        return <VideoCard />;
+      })}
     </main>
   );
 }
 
-export default HomePage;
+export default Homepage;

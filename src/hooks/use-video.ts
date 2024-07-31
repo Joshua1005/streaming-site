@@ -1,209 +1,207 @@
 "use client";
 
-import { CODES } from "@/constants";
+import { VIDEO_KEY_CODES } from "@/constants";
 import { videoReducer } from "@/reducers/video-reducer";
-import { RefObject, useCallback, useReducer } from "react";
+import { RefObject, useReducer } from "react";
 
 const videoState: VideoState = {
-  currentTime: 0,
   duration: 0,
   volume: 1,
   playbackRate: 1,
+  currentTime: 0,
   isPlaying: false,
   isFullscreen: false,
   isPictureInPicture: false,
   isSubtitlesEnabled: false,
+  isBuffering: false,
 };
 
-function useVideo(videoRef: RefObject<HTMLVideoElement | null>) {
+function useVideo() {
   const [state, dispatch] = useReducer(videoReducer, videoState);
-  let lastVolume = 0;
 
-  const handleTogglePause = useCallback(
-    () =>
-      state.isPlaying ? videoRef.current?.pause() : videoRef.current?.play(),
-    [state.isPlaying]
-  );
+  const setDuration = (duration: number) =>
+    dispatch({ type: "SET_DURATION", payload: { duration } });
 
-  const handleToggleFullscreen = useCallback(
-    () =>
-      state.isFullscreen
-        ? document.exitFullscreen()
-        : videoRef.current?.requestFullscreen(),
-    [state.isFullscreen]
-  );
+  const setCurrentTime = (currentTime: number) =>
+    dispatch({ type: "SET_CURRENT_TIME", payload: { currentTime } });
 
-  const handleTogglePictureInPicture = useCallback(
-    () =>
-      state.isPictureInPicture
-        ? document.exitPictureInPicture()
-        : videoRef.current?.requestPictureInPicture(),
-    [state.isPictureInPicture]
-  );
+  const setPlaybackRate = (playbackRate: number) =>
+    dispatch({ type: "SET_PLAYBACK_RATE", payload: { playbackRate } });
 
-  const handleChangingPlaybackRate = useCallback(
-    (playbackRate: string) => {
-      if (videoRef.current)
-        videoRef.current.playbackRate = parseFloat(playbackRate);
-    },
-    [state.playbackRate]
-  );
+  const setVolume = (volume: number) =>
+    dispatch({ type: "SET_VOLUME", payload: { volume } });
 
-  const handleChangingVolume = useCallback(
-    (volume: number[]) => {
-      if (videoRef.current) videoRef.current.volume = volume[0] / 100;
-    },
-    [state.volume]
-  );
+  const setIsPlaying = (isPlaying: boolean) =>
+    dispatch({ type: "SET_IS_PLAYING", payload: { isPlaying } });
 
-  const handleChangingCurrentTime = useCallback(
-    (currentTime: number[]) => {
-      if (videoRef.current) videoRef.current.currentTime = currentTime[0];
-    },
-    [state.volume]
-  );
+  const setIsFullscreen = (isFullscreen: boolean) =>
+    dispatch({ type: "SET_IS_FULLSCREEN", payload: { isFullscreen } });
 
-  const handleFullscreenChange = () => {
-    if (videoRef.current)
-      dispatch({
-        type: "SET_IS_FULLSCREEN",
-        payload: {
-          isFullscreen: videoRef.current === document.fullscreenElement,
-        },
-      });
-  };
+  const setIsPictureInPicture = (isPictureInPicture: boolean) =>
+    dispatch({
+      type: "SET_IS_PICTURE_IN_PICTURE",
+      payload: { isPictureInPicture },
+    });
 
-  const handlePictureInPictureChange = () => {
-    if (videoRef.current)
-      dispatch({
-        type: "SET_IS_PICTURE_IN_PICTURE",
-        payload: {
-          isPictureInPicture:
-            videoRef.current === document.pictureInPictureElement,
-        },
-      });
-  };
+  const setIsBuffering = (isBuffering: boolean) =>
+    dispatch({ type: "SET_IS_BUFFERING", payload: { isBuffering } });
 
-  const handleSettingDuration = () => {
-    if (videoRef.current) {
-      const duration = videoRef.current.duration;
-      dispatch({ type: "SET_DURATION", payload: { duration } });
-    }
-  };
+  type VideoRef = RefObject<HTMLVideoElement>;
+  type ContainerRef = RefObject<HTMLDivElement>;
 
-  const handleKeyEvent = (e: KeyboardEvent) => {
+  const changeCurrentTime = (videoRef: VideoRef, currentTime: number) => {
     if (!videoRef.current) return;
+
+    videoRef.current.currentTime = currentTime;
+  };
+
+  const changePlaybackRate = (videoRef: VideoRef, playbackRate: number) => {
+    if (!videoRef.current) return;
+
+    videoRef.current.playbackRate = playbackRate;
+  };
+
+  const changeVolume = (videoRef: VideoRef, volume: number) => {
+    if (!videoRef.current) return;
+
+    videoRef.current.volume = volume;
+  };
+
+  const changeIsPlaying = (videoRef: VideoRef) => {
+    if (!videoRef.current) return;
+
+    !videoRef.current.paused
+      ? videoRef.current.pause()
+      : videoRef.current.play();
+  };
+
+  const changeIsFullscreen = (containerRef: ContainerRef) => {
+    if (!containerRef.current) return;
+
+    document.fullscreenElement
+      ? document.exitFullscreen()
+      : containerRef.current.requestFullscreen();
+  };
+
+  const changePictureInPicture = (videoRef: VideoRef) => {
+    if (!videoRef.current) return;
+
+    document.pictureInPictureElement
+      ? document.exitPictureInPicture()
+      : videoRef.current.requestPictureInPicture();
+  };
+
+  const initialize = (videoRef: VideoRef, containerRef: ContainerRef) => {
+    if (!videoRef.current) return;
+    if (!containerRef.current) return;
+
+    const isFullscreen = containerRef.current === document.fullscreenElement;
+    const isPictureInPicture =
+      videoRef.current === document.pictureInPictureElement;
+
+    setDuration(videoRef.current.duration || 0);
+
+    containerRef.current.addEventListener("fullscreenchange", () =>
+      setIsFullscreen(isFullscreen)
+    );
+
+    videoRef.current.addEventListener("enterpictureinpicture", () =>
+      setIsPictureInPicture(isPictureInPicture)
+    );
+    videoRef.current.addEventListener("leavepictureinpicture", () =>
+      setIsPictureInPicture(isPictureInPicture)
+    );
+  };
+
+  const deinitialize = (videoRef: VideoRef, containerRef: ContainerRef) => {
+    if (!videoRef.current) return;
+    if (!containerRef.current) return;
+
+    const isFullscreen = containerRef.current === document.fullscreenElement;
+    const isPictureInPicture =
+      videoRef.current === document.pictureInPictureElement;
+
+    containerRef.current.removeEventListener("fullscreenchange", () =>
+      setIsFullscreen(isFullscreen)
+    );
+    videoRef.current.removeEventListener("enterpictureinpicture", () =>
+      setIsPictureInPicture(isPictureInPicture)
+    );
+    videoRef.current.removeEventListener("leavepictureinpicture", () =>
+      setIsPictureInPicture(isPictureInPicture)
+    );
+  };
+
+  const keyEvent = (
+    e: KeyboardEvent,
+    videoRef: VideoRef,
+    containerRef: ContainerRef
+  ) => {
+    if (!videoRef.current) return;
+    if (!containerRef.current) return;
     const { code } = e;
-    if (CODES.includes(code)) e.preventDefault();
+
+    if (VIDEO_KEY_CODES.includes(code)) e.preventDefault();
 
     switch (code) {
       case "Space":
-        videoRef.current.paused
-          ? videoRef.current.play()
-          : videoRef.current.pause();
+        changeIsPlaying(videoRef);
         break;
       case "KeyK":
-        videoRef.current.paused
-          ? videoRef.current.play()
-          : videoRef.current.pause();
+        changeIsPlaying(videoRef);
         break;
       case "KeyJ":
-        videoRef.current.currentTime -= 10;
-        break;
-      case "KeyL":
-        videoRef.current.currentTime += 10;
+        changeCurrentTime(videoRef, (videoRef.current.currentTime -= 10));
         break;
       case "KeyF":
-        videoRef.current === document.fullscreenElement
-          ? document.exitFullscreen()
-          : videoRef.current.requestFullscreen();
+        changeIsFullscreen(containerRef);
         break;
-      case "KeyM":
-        if (videoRef.current.volume > 0) {
-          lastVolume = videoRef.current.volume;
-
-          videoRef.current.volume = 0;
-        } else if (videoRef.current.volume === 0) {
-          lastVolume > 0
-            ? (videoRef.current.volume = lastVolume)
-            : (videoRef.current.volume = 1);
-        }
+      case "KeyL":
+        changeCurrentTime(videoRef, (videoRef.current.currentTime += 10));
         break;
       case "KeyI":
-        videoRef.current === document.pictureInPictureElement
-          ? document.exitPictureInPicture()
-          : videoRef.current.requestPictureInPicture();
+        changePictureInPicture(videoRef);
         break;
       case "ArrowUp":
-        videoRef.current.volume > 0.9
+        videoRef.current.volume >= 0.9
           ? (videoRef.current.volume = 1)
           : (videoRef.current.volume += 0.1);
         break;
       case "ArrowDown":
-        videoRef.current.volume < 0.1
+        videoRef.current.volume <= 0.1
           ? (videoRef.current.volume = 0)
           : (videoRef.current.volume -= 0.1);
         break;
-      case "ArrowRight":
-        videoRef.current.currentTime += 10;
-        break;
       case "ArrowLeft":
-        videoRef.current.currentTime -= 10;
+        changeCurrentTime(videoRef, (videoRef.current.currentTime -= 10));
         break;
-      case "Home":
-        videoRef.current.currentTime = 0;
+      case "ArrowRight":
+        changeCurrentTime(videoRef, (videoRef.current.currentTime += 10));
         break;
-      case "End":
-        videoRef.current.currentTime = videoRef.current.duration;
+      default:
+        break;
     }
-  };
-
-  const initialize = () => {
-    if (!videoRef.current) return;
-
-    videoRef.current.addEventListener(
-      "fullscreenchange",
-      () => handleFullscreenChange
-    );
-    videoRef.current.addEventListener(
-      "enterpictureinpicture",
-      () => handlePictureInPictureChange
-    );
-    videoRef.current.addEventListener(
-      "leavepictureinpicture",
-      handlePictureInPictureChange
-    );
-  };
-
-  const deinitialize = () => {
-    if (!videoRef.current) return;
-    videoRef.current.removeEventListener(
-      "fullscreenchange",
-      handleFullscreenChange
-    );
-    videoRef.current.removeEventListener(
-      "enterpictureinpicture",
-      handlePictureInPictureChange
-    );
-    videoRef.current.removeEventListener(
-      "leavepictureinpicture",
-      handlePictureInPictureChange
-    );
   };
 
   return {
     state,
-    dispatch,
-    handleTogglePause,
-    handleToggleFullscreen,
-    handleTogglePictureInPicture,
-    handleChangingPlaybackRate,
-    handleChangingVolume,
-    handleChangingCurrentTime,
-    handleSettingDuration,
-    handleKeyEvent,
+    setDuration,
+    setCurrentTime,
+    setPlaybackRate,
+    setVolume,
+    setIsPlaying,
+    setIsFullscreen,
+    setIsPictureInPicture,
+    setIsBuffering,
+    changeCurrentTime,
+    changePlaybackRate,
+    changeVolume,
+    changeIsPlaying,
+    changeIsFullscreen,
+    changePictureInPicture,
     initialize,
     deinitialize,
+    keyEvent,
   };
 }
 

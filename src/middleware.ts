@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import authConfig from "@/auth.config";
 import { NextResponse } from "next/server";
-import { AUTH_ROUTES } from "@/constants";
+import { AUTH_ROUTES, PUBLIC_ROUTES } from "@/constants";
 
 const { auth: middleware } = NextAuth(authConfig);
 
@@ -27,6 +27,9 @@ export default middleware((req) => {
   } = req;
 
   const isAuthRoute = AUTH_ROUTES.includes(pathname);
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+
+  headers.set("x-current-path", pathname);
 
   /**
    * Why declare the function here? So we can create a closure around the request object.
@@ -42,7 +45,9 @@ export default middleware((req) => {
    * Don't prevent the user to go into AUTH_ROUTES.
    */
   if (!auth)
-    return isAuthRoute ? NextResponse.next() : redirect(AUTH_ROUTES[0]);
+    return isAuthRoute || isPublicRoute
+      ? NextResponse.next()
+      : redirect(AUTH_ROUTES[0]);
 
   /**
    * If authenticated prevent the page to load into AUTH_ROUTES.
@@ -54,5 +59,5 @@ export default middleware((req) => {
     return redirect(referer);
   }
 
-  return NextResponse.next();
+  return NextResponse.next({ headers });
 });

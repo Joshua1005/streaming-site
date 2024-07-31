@@ -3,8 +3,7 @@ import { Inter as FontSans } from "next/font/google";
 
 import { cn } from "@/lib/utils";
 import ReactQueryProvider from "@/context/react-query-provider";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { EdgeStoreProvider } from "@/context/edge-store-provider";
+import { AppHeader } from "@/components/app-header";
 
 type Props = { children: React.ReactNode };
 
@@ -18,14 +17,10 @@ function RootLayout({ children }: Props) {
     <html lang="en" suppressHydrationWarning>
       <head />
       <body
-        className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          fontSans.variable
-        )}
+        className={cn("bg-background font-sans antialiased", fontSans.variable)}
       >
-        <ReactQueryProvider>
-          <TooltipProvider>{children}</TooltipProvider>
-        </ReactQueryProvider>
+        <AppHeader />
+        <ReactQueryProvider>{children}</ReactQueryProvider>
       </body>
     </html>
   );
